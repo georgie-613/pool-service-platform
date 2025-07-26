@@ -25,7 +25,7 @@
   </head>
   <body>
     <h1>Pool Service Platform</h1>
-    <section>
+    <section id="service-section" style="display:none;">
       <h2>Add Service</h2>
       <form id="service-form">
         <label for="service">Service:</label>
@@ -35,30 +35,78 @@
         <button type="submit">Add</button>
       </form>
     </section>
-    <section>
+    <section id="services-section" style="display:none;">
       <h2>Services</h2>
       <ul id="services-list"></ul>
     </section>
+
+    <section id="user-section">
+      <h2>User Accounts</h2>
+      <h3>Register</h3>
+      <form id="register-form">
+        <label for="reg-username">Username:</label>
+        <input id="reg-username" name="username" required />
+        <label for="reg-password">Password:</label>
+        <input id="reg-password" name="password" type="password" required />
+        <button type="submit">Register</button>
+      </form>
+      <h3>Login</h3>
+      <form id="login-form">
+        <label for="login-username">Username:</label>
+        <input id="login-username" name="username" required />
+        <label for="login-password">Password:</label>
+        <input id="login-password" name="password" type="password" required />
+        <button type="submit">Login</button>
+      </form>
+      <p id="auth-message" style="color: #d33; margin-top: 0.5rem;"></p>
+    </section>
     <script>
       async function loadServices() {
-        const response = await fetch('/services');
-        const services = await response.json();
         const list = document.getElementById('services-list');
         list.innerHTML = '';
+        const headers = {};
+        const token = sessionStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        const response = await fetch('/services', { headers });
+        if (response.status === 401) {
+          list.innerHTML = '<li>Unauthorized. Please log in.</li>';
+          return;
+        }
+        const services = await response.json();
         services.forEach((svc) => {
           const li = document.createElement('li');
-          // Display the service name and date
           li.textContent = `${svc.service} – ${svc.date} `;
-          // Only add a delete button if an id is present on the service
           if (svc.id !== undefined) {
             const delBtn = document.createElement('button');
             delBtn.textContent = 'Delete';
             delBtn.addEventListener('click', async () => {
-              await fetch(`/services/${svc.id}`, { method: 'DELETE' });
-              // Reload the list after deletion
+              const headersDel = {};
+              const t = sessionStorage.getItem('token');
+              if (t) headersDel['Authorization'] = 'Bearer ' + t;
+              await fetch(`/services/${svc.id}`, { method: 'DELETE', headers: headersDel });
               loadServices();
             });
             li.appendChild(delBtn);
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.addEventListener('click', async () => {
+              const newService = prompt('Enter new service name:', svc.service);
+              const newDate = prompt('Enter new date (YYYY-MM-DD):', svc.date);
+              if (newService != null && newDate != null) {
+                const headersPut = { 'Content-Type': 'application/json' };
+                const t2 = sessionStorage.getItem('token');
+                if (t2) headersPut['Authorization'] = 'Bearer ' + t2;
+                await fetch(`/services/${svc.id}`, {
+                  method: 'PUT',
+                  headers: headersPut,
+                  body: JSON.stringify({ service: newService, date: newDate }),
+                });
+                loadServices();
+              }
+            });
+            li.appendChild(editBtn);
           }
           list.appendChild(li);
         });
@@ -68,9 +116,12 @@
         event.preventDefault();
         const service = document.getElementById('service').value;
         const date = document.getElementById('date').value;
+        const headers = { 'Content-Type': 'application/json' };
+        const token = sessionStorage.getItem('token');
+        if (token) headers['Authorization'] = 'Bearer ' + token;
         await fetch('/services', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ service, date }),
         });
         document.getElementById('service').value = '';
@@ -78,8 +129,58 @@
         loadServices();
       });
 
-      // Load services on page load
-      loadServices();
+      document.getElementById('register-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const username = document.getElementById('reg-username').value;
+        const password = document.getElementById('reg-password').value;
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        document.getElementById('auth-message').textContent = data.message || data.error;
+        document.getElementById('reg-password').value = '';
+      });
+
+      document.getElementById('login-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        document.getElementById('auth-message').textContent = data.message || data.error;
+        document.getElementById('login-password').value = '';
+        if (data.token) {
+          sessionStorage.setItem('token', data.token);
+          showDashboard();
+        }
+      });
+
+      function showDashboard() {
+        document.getElementById('user-section').style.display = 'none';
+        document.getElementById('service-section').style.display = '';
+        document.getElementById('services-section').style.display = '';
+        loadServices();
+      }
+
+      function showLogin() {
+        document.getElementById('user-section').style.display = '';
+        document.getElementById('service-section').style.display = 'none';
+        document.getElementById('services-section').style.display = 'none';
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        if (sessionStorage.getItem('token')) {
+          showDashboard();
+        } else {
+          showLogin();
+        }
+      });
     </script>
   </body>
 </html>
