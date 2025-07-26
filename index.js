@@ -79,6 +79,23 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Retrieve a single service by ID: e.g. GET /services/123
+  // The ID is extracted from the URL path after '/services/'.
+  if (req.method === 'GET' && pathname.startsWith('/services/')) {
+    const idStr = pathname.split('/')[2];
+    const id = Number(idStr);
+    const services = getServices();
+    const svc = services.find(s => s.id === id);
+    if (svc) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(svc));
+    } else {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Service not found' }));
+    }
+    return;
+  }
+
   if (req.method === 'GET' && pathname === '/services') {
     // Return the list of services from the JSON file
     const services = getServices();
@@ -96,6 +113,9 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const newService = JSON.parse(body);
+        // Assign a unique numeric ID based on the current timestamp. This makes it
+        // easy to retrieve/update/delete individual services later on.
+        newService.id = Date.now();
         const services = getServices();
         services.push(newService);
         saveServices(services);
@@ -106,6 +126,57 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: 'Invalid JSON' }));
       }
     });
+    return;
+  }
+
+  // Update an existing service by ID: PUT /services/:id
+  if (req.method === 'PUT' && pathname.startsWith('/services/')) {
+    const idStr = pathname.split('/')[2];
+    const id = Number(idStr);
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      try {
+        const updatedService = JSON.parse(body);
+        const services = getServices();
+        const index = services.findIndex(s => s.id === id);
+        if (index === -1) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Service not found' }));
+          return;
+        }
+        // Preserve the original ID
+        updatedService.id = id;
+        services[index] = updatedService;
+        saveServices(services);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(updatedService));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // Delete a service by ID: DELETE /services/:id
+  if (req.method === 'DELETE' && pathname.startsWith('/services/')) {
+    const idStr = pathname.split('/')[2];
+    const id = Number(idStr);
+    const services = getServices();
+    const index = services.findIndex(s => s.id === id);
+    if (index === -1) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Service not found' }));
+      return;
+    }
+    services.splice(index, 1);
+    saveServices(services);
+    // No content response for a successful deletion
+    res.writeHead(204);
+    res.end();
     return;
   }
 
