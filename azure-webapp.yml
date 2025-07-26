@@ -1,0 +1,60 @@
+name: Deploy Node.js backend to Azure App Service
+
+# This workflow will build and deploy your Node.js application to Azure App Service
+# every time changes are pushed to the `main` branch. It relies on the
+# `azure/webapps-deploy` action. Before this workflow will work you must
+# provision an Azure App Service (for example via the Azure Portal or CLI) and
+# generate a publish profile from the portal. Store the publish profile XML
+# contents as a repository secret named `AZURE_WEBAPP_PUBLISH_PROFILE`.
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  # Change this to the name of your Azure Web App. It should match the name
+  # you choose when creating the web app in the Azure portal.
+  AZURE_WEBAPP_NAME: pool-service-platform-app
+
+  # The path to your web app project. Using '.' will package the entire
+  # repository. If your server lives in a subfolder (e.g. `backend`), set
+  # this to that relative path.
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+
+  # Node version to use during the build. You can adjust this as needed.
+  NODE_VERSION: '18.x'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          # Install front‑end dependencies and build assets if necessary.
+          # For example, if you use a framework like React or Vue in the
+          # frontend folder, uncomment the following lines:
+          # cd frontend
+          # npm install
+          # npm run build
+
+      - name: Zip project for deployment
+        run: |
+          zip -r release.zip ${{ env.AZURE_WEBAPP_PACKAGE_PATH }} -x '*.git*'
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: release.zip

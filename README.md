@@ -84,9 +84,62 @@ pool-service-platform/
 
 ## Preparing for deployment
 
-Days 11–12 of the guide cover deploying this application to Azure. With
-the code now separated into `frontend` and `backend` directories, you can
-deploy the back‑end to an Azure App Service and the front‑end as a static
-site. Environment variables such as `JWT_SECRET` should be configured
-through the Azure portal or your CI/CD pipeline. See the guide for
-detailed steps.
+ Days 11–12 of the guide cover deploying this application to Azure. With
+ the code now separated into `frontend` and `backend` directories, you can
+ deploy the back‑end to an Azure App Service and the front‑end as a static
+ site.
+
+### 1. Provision an Azure Web App
+
+1. Sign in to the [Azure portal](https://portal.azure.com/) and create a new
+   **Web App**. Give it a unique name (for example `pool-service-platform-app`),
+   choose a runtime stack of **Node.js**, and select a region close to you. A
+   resource group and App Service plan will be created automatically. After
+   creation you can find your app’s default URL under **Overview**.
+
+2. Generate a *publish profile* by navigating to your Web App in the portal,
+   clicking **Get publish profile** and downloading the resulting XML file.
+   This file contains deployment credentials. Store its contents as a
+   [repository secret](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
+   named `AZURE_WEBAPP_PUBLISH_PROFILE` in your GitHub repository.
+
+### 2. Set up GitHub Actions for CI/CD
+
+A workflow file has been added at `.github/workflows/azure-webapp.yml` which
+builds and deploys the application on every push to the `main` branch. It
+checks out the code, installs Node dependencies, zips the project and uses
+the `azure/webapps-deploy` action to publish it. The workflow relies on
+certain variables:
+
+- **AZURE_WEBAPP_NAME** – the name of your Web App. Update this in the YAML
+  file if you used a different name when creating the app.
+- **AZURE_WEBAPP_PUBLISH_PROFILE** – the secret described above. GitHub
+  injects it into the action via `${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}`.
+- **AZURE_WEBAPP_PACKAGE_PATH** – path to package. The default value `.`
+  packages the whole repository which includes both backend and frontend.
+
+When you push changes to `main` the workflow will run automatically. It uses
+the official Azure deploy action shown in the GitHub docs to push the
+package to your app【474220600761611†L524-L577】.
+
+### 3. Configure environment variables
+
+Important secrets such as `JWT_SECRET` should never be committed to the
+repository. Azure provides **Configuration > Application settings** where you
+can add key–value pairs that become environment variables at runtime. For
+example, create an entry called `JWT_SECRET` and set it to your desired
+secret value. You can also define `PORT` if you want to override the default
+port (Azure automatically sets `PORT` or `SERVER_PORT` when running in
+App Service【241746418339072†L144-L147】).
+
+### 4. Point your domain and enforce HTTPS
+
+After deployment you can configure a custom domain under **Custom domains** in
+the portal and add a free SSL certificate under **TLS/SSL settings**. Follow
+the wizard to verify your domain ownership and enable HTTPS.
+
+After completing these steps, visit your Web App URL (for example
+`https://pool-service-platform-app.azurewebsites.net`) and try registering
+a user and adding a service. The CI/CD pipeline will automatically deploy
+future commits. If issues arise, inspect the workflow logs in the **Actions**
+tab and the application logs in **Log stream** of the Azure portal.
