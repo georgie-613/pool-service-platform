@@ -49,8 +49,9 @@
           const li = document.createElement('li');
           // Display the service name and date
           li.textContent = `${svc.service} – ${svc.date} `;
-          // Only add a delete button if an id is present on the service
+          // Only add buttons if an id is present on the service
           if (svc.id !== undefined) {
+            // Delete button
             const delBtn = document.createElement('button');
             delBtn.textContent = 'Delete';
             delBtn.addEventListener('click', async () => {
@@ -59,6 +60,24 @@
               loadServices();
             });
             li.appendChild(delBtn);
+
+            // Edit button
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.addEventListener('click', async () => {
+              // Prompt the user for new values. Prepopulate with current values.
+              const newService = prompt('Enter new service name:', svc.service);
+              const newDate = prompt('Enter new date (YYYY-MM-DD):', svc.date);
+              if (newService != null && newDate != null) {
+                await fetch(`/services/${svc.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ service: newService, date: newDate }),
+                });
+                loadServices();
+              }
+            });
+            li.appendChild(editBtn);
           }
           list.appendChild(li);
         });
