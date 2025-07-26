@@ -1,0 +1,4 @@
+# Ignore environment files and logs
+.env
+server.log
+tmp.log
