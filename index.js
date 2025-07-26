@@ -15,6 +15,8 @@ const url = require('url');
 // Import persistence helpers from the serviceStore module. This
 // module encapsulates reading and writing the services JSON file.
 const { getServices, saveServices } = require('./serviceStore');
+const { getUsers, saveUsers } = require('./userStore');
+const crypto = require('crypto');
 
 // Define the port on which the server will listen. Use the PORT
 // environment variable if set, otherwise fall back to 3000. This
@@ -55,8 +57,95 @@ function logRequest(req) {
 const server = http.createServer((req, res) => {
   // Log the request at the very beginning of handling it.
   logRequest(req);
+
+  // Parse the request URL once for reuse. We also extract the
+  // pathname outside of each conditional block for convenience.
   const parsedUrl = url.parse(req.url, true);
   const { pathname } = parsedUrl;
+
+  // -----------------------------------------------------------------
+  // User registration and login endpoints
+  // -----------------------------------------------------------------
+  // Register a new user. Expects a JSON body with `username` and
+  // `password`. Usernames must be unique. Passwords are hashed
+  // using SHA‑256 before storage.
+  if (req.method === 'POST' && pathname === '/register') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      try {
+        const { username, password } = JSON.parse(body);
+        // Basic validation
+        if (!username || !password) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Username and password are required' }));
+          return;
+        }
+        const users = getUsers();
+        if (users.some(u => u.username === username)) {
+          res.writeHead(409, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'User already exists' }));
+          return;
+        }
+        const passwordHash = crypto
+          .createHash('sha256')
+          .update(password)
+          .digest('hex');
+        users.push({ username, passwordHash });
+        saveUsers(users);
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'User registered' }));
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
+
+  // Authenticate a user. Expects `username` and `password` in the
+  // request body. Returns 200 if the credentials match, otherwise
+  // 401 Unauthorized.
+  if (req.method === 'POST' && pathname === '/login') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk;
+    });
+    req.on('end', () => {
+      try {
+        const { username, password } = JSON.parse(body);
+        if (!username || !password) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Username and password are required' }));
+          return;
+        }
+        const users = getUsers();
+        const user = users.find(u => u.username === username);
+        if (!user) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid credentials' }));
+          return;
+        }
+        const passwordHash = crypto
+          .createHash('sha256')
+          .update(password)
+          .digest('hex');
+        if (user.passwordHash === passwordHash) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ message: 'Login successful' }));
+        } else {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid credentials' }));
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid JSON' }));
+      }
+    });
+    return;
+  }
 
   if (req.method === 'GET' && pathname === '/') {
     // Root route: serve the HTML front‑end from the public directory.
