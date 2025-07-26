@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pool Service Platform</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 2rem;
+      }
+      h1 {
+        color: #0077c0;
+      }
+      form {
+        margin-bottom: 1rem;
+      }
+      label {
+        margin-right: 0.5rem;
+      }
+      input {
+        margin-right: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Pool Service Platform</h1>
+    <section>
+      <h2>Add Service</h2>
+      <form id="service-form">
+        <label for="service">Service:</label>
+        <input id="service" name="service" required />
+        <label for="date">Date:</label>
+        <input id="date" name="date" type="date" required />
+        <button type="submit">Add</button>
+      </form>
+    </section>
+    <section>
+      <h2>Services</h2>
+      <ul id="services-list"></ul>
+    </section>
+    <script>
+      async function loadServices() {
+        const response = await fetch('/services');
+        const services = await response.json();
+        const list = document.getElementById('services-list');
+        list.innerHTML = '';
+        services.forEach((svc) => {
+          const li = document.createElement('li');
+          li.textContent = `${svc.service} – ${svc.date}`;
+          list.appendChild(li);
+        });
+      }
+
+      document.getElementById('service-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const service = document.getElementById('service').value;
+        const date = document.getElementById('date').value;
+        await fetch('/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ service, date }),
+        });
+        document.getElementById('service').value = '';
+        document.getElementById('date').value = '';
+        loadServices();
+      });
+
+      // Load services on page load
+      loadServices();
+    </script>
+  </body>
+</html>
