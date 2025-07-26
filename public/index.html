@@ -25,7 +25,7 @@
   </head>
   <body>
     <h1>Pool Service Platform</h1>
-    <section>
+    <section id="service-section" style="display:none;">
       <h2>Add Service</h2>
       <form id="service-form">
         <label for="service">Service:</label>
@@ -35,12 +35,12 @@
         <button type="submit">Add</button>
       </form>
     </section>
-    <section>
+    <section id="services-section" style="display:none;">
       <h2>Services</h2>
       <ul id="services-list"></ul>
     </section>
 
-    <section>
+    <section id="user-section">
       <h2>User Accounts</h2>
       <h3>Register</h3>
       <form id="register-form">
@@ -62,10 +62,20 @@
     </section>
     <script>
       async function loadServices() {
-        const response = await fetch('/services');
-        const services = await response.json();
         const list = document.getElementById('services-list');
         list.innerHTML = '';
+        // Include the auth token in the request if present
+        const headers = {};
+        const token = sessionStorage.getItem('token');
+        if (token) {
+          headers['Authorization'] = 'Bearer ' + token;
+        }
+        const response = await fetch('/services', { headers });
+        if (response.status === 401) {
+          list.innerHTML = '<li>Unauthorized. Please log in.</li>';
+          return;
+        }
+        const services = await response.json();
         services.forEach((svc) => {
           const li = document.createElement('li');
           // Display the service name and date
@@ -76,7 +86,10 @@
             const delBtn = document.createElement('button');
             delBtn.textContent = 'Delete';
             delBtn.addEventListener('click', async () => {
-              await fetch(`/services/${svc.id}`, { method: 'DELETE' });
+              const headersDel = {};
+              const t = sessionStorage.getItem('token');
+              if (t) headersDel['Authorization'] = 'Bearer ' + t;
+              await fetch(`/services/${svc.id}`, { method: 'DELETE', headers: headersDel });
               // Reload the list after deletion
               loadServices();
             });
@@ -90,9 +103,12 @@
               const newService = prompt('Enter new service name:', svc.service);
               const newDate = prompt('Enter new date (YYYY-MM-DD):', svc.date);
               if (newService != null && newDate != null) {
+                const headersPut = { 'Content-Type': 'application/json' };
+                const t2 = sessionStorage.getItem('token');
+                if (t2) headersPut['Authorization'] = 'Bearer ' + t2;
                 await fetch(`/services/${svc.id}`, {
                   method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: headersPut,
                   body: JSON.stringify({ service: newService, date: newDate }),
                 });
                 loadServices();
@@ -108,9 +124,12 @@
         event.preventDefault();
         const service = document.getElementById('service').value;
         const date = document.getElementById('date').value;
+        const headers = { 'Content-Type': 'application/json' };
+        const token = sessionStorage.getItem('token');
+        if (token) headers['Authorization'] = 'Bearer ' + token;
         await fetch('/services', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ service, date }),
         });
         document.getElementById('service').value = '';
@@ -151,6 +170,34 @@
         document.getElementById('auth-message').textContent = data.message || data.error;
         // Clear password field
         document.getElementById('login-password').value = '';
+        // If a token is returned, store it and show the dashboard
+        if (data.token) {
+          sessionStorage.setItem('token', data.token);
+          showDashboard();
+        }
+      });
+
+      // Show the appropriate view based on auth state
+      function showDashboard() {
+        document.getElementById('user-section').style.display = 'none';
+        document.getElementById('service-section').style.display = '';
+        document.getElementById('services-section').style.display = '';
+        loadServices();
+      }
+
+      function showLogin() {
+        document.getElementById('user-section').style.display = '';
+        document.getElementById('service-section').style.display = 'none';
+        document.getElementById('services-section').style.display = 'none';
+      }
+
+      // On page load, decide which view to show
+      window.addEventListener('DOMContentLoaded', () => {
+        if (sessionStorage.getItem('token')) {
+          showDashboard();
+        } else {
+          showLogin();
+        }
       });
     </script>
   </body>
