@@ -39,6 +39,27 @@
       <h2>Services</h2>
       <ul id="services-list"></ul>
     </section>
+
+    <section>
+      <h2>User Accounts</h2>
+      <h3>Register</h3>
+      <form id="register-form">
+        <label for="reg-username">Username:</label>
+        <input id="reg-username" name="username" required />
+        <label for="reg-password">Password:</label>
+        <input id="reg-password" name="password" type="password" required />
+        <button type="submit">Register</button>
+      </form>
+      <h3>Login</h3>
+      <form id="login-form">
+        <label for="login-username">Username:</label>
+        <input id="login-username" name="username" required />
+        <label for="login-password">Password:</label>
+        <input id="login-password" name="password" type="password" required />
+        <button type="submit">Login</button>
+      </form>
+      <p id="auth-message" style="color: #d33; margin-top: 0.5rem;"></p>
+    </section>
     <script>
       async function loadServices() {
         const response = await fetch('/services');
@@ -99,6 +120,38 @@
 
       // Load services on page load
       loadServices();
+
+      // Handle user registration
+      document.getElementById('register-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const username = document.getElementById('reg-username').value;
+        const password = document.getElementById('reg-password').value;
+        const res = await fetch('/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        document.getElementById('auth-message').textContent = data.message || data.error;
+        // Clear password field
+        document.getElementById('reg-password').value = '';
+      });
+
+      // Handle user login
+      document.getElementById('login-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        document.getElementById('auth-message').textContent = data.message || data.error;
+        // Clear password field
+        document.getElementById('login-password').value = '';
+      });
     </script>
   </body>
 </html>
