@@ -1,0 +1,20 @@
+{
+  "name": "pool-service-platform",
+  "version": "1.0.0",
+  "description": "This is the first day of the project. More details coming soon.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/georgie-613/pool-service-platform.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/georgie-613/pool-service-platform/issues"
+  },
+  "homepage": "https://github.com/georgie-613/pool-service-platform#readme"
+}
