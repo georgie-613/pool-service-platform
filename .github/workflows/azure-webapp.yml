@@ -15,7 +15,7 @@ on:
 env:
   # Change this to the name of your Azure Web App. It should match the name
   # you choose when creating the web app in the Azure portal.
-  AZURE_WEBAPP_NAME: pool-service-platform-app
+  AZURE_WEBAPP_NM   :Caribbean-Bay-Pool-Svc
 
   # The path to your web app project. Using '.' will package the entire
   # repository. If your server lives in a subfolder (e.g. `backend`), set
