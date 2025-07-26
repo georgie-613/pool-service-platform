@@ -57,9 +57,18 @@ const server = http.createServer((req, res) => {
   const { pathname } = parsedUrl;
 
   if (req.method === 'GET' && pathname === '/') {
-    // Root route: respond with a welcome message
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Welcome to the Pool Service Platform!');
+    // Root route: serve the HTML front‑end from the public directory.
+    const indexPath = __dirname + '/public/index.html';
+    fs.readFile(indexPath, (err, data) => {
+      if (err) {
+        // Fallback to plain text welcome message if the HTML is not found
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Welcome to the Pool Service Platform!');
+      } else {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(data);
+      }
+    });
     return;
   }
 
