@@ -47,7 +47,19 @@
         list.innerHTML = '';
         services.forEach((svc) => {
           const li = document.createElement('li');
-          li.textContent = `${svc.service} – ${svc.date}`;
+          // Display the service name and date
+          li.textContent = `${svc.service} – ${svc.date} `;
+          // Only add a delete button if an id is present on the service
+          if (svc.id !== undefined) {
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Delete';
+            delBtn.addEventListener('click', async () => {
+              await fetch(`/services/${svc.id}`, { method: 'DELETE' });
+              // Reload the list after deletion
+              loadServices();
+            });
+            li.appendChild(delBtn);
+          }
           list.appendChild(li);
         });
       }
