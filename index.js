@@ -12,41 +12,16 @@ const http = require('http');
 const fs = require('fs');
 const url = require('url');
 
-// Define the port on which the server will listen. Using 3000 is a
-// common convention for development servers.
-const port = 3000;
+// Import persistence helpers from the serviceStore module. This
+// module encapsulates reading and writing the services JSON file.
+const { getServices, saveServices } = require('./serviceStore');
 
-// Path to the JSON file that stores service records. Each record
-// represents a simple service appointment or note. If the file
-// doesn't exist, it will be created when a new service is saved.
-const servicesFile = __dirname + '/services.json';
+// Define the port on which the server will listen. Use the PORT
+// environment variable if set, otherwise fall back to 3000. This
+// allows the application to run on different ports without code
+// changes.
+const port = process.env.PORT || 3000;
 
-/**
- * Read the services from the JSON file. If the file does not
- * exist or cannot be parsed, an empty array is returned instead of
- * throwing an error. This helper keeps the rest of the server
- * logic simple.
- *
- * @returns {Array} List of service objects
- */
-function getServices() {
-  try {
-    const data = fs.readFileSync(servicesFile, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    return [];
-  }
-}
-
-/**
- * Persist the given services array to disk. The data is
- * stringified with indentation to make the file human readable.
- *
- * @param {Array} services Array of service objects
- */
-function saveServices(services) {
-  fs.writeFileSync(servicesFile, JSON.stringify(services, null, 2));
-}
 
 // Create an HTTP server. The callback function will be invoked
 // whenever a request is received. Here we branch based on the
