@@ -22,12 +22,39 @@ const { getServices, saveServices } = require('./serviceStore');
 // changes.
 const port = process.env.PORT || 3000;
 
+// Path to a simple log file. Each incoming request will be
+// appended to this file with a timestamp, method and URL. Logging
+// requests helps with debugging and provides a minimal audit
+// trail for the application.
+const logFile = __dirname + '/server.log';
+
+/**
+ * Write a single line to the log file describing the incoming
+ * request. The line includes an ISO formatted timestamp, the HTTP
+ * method and the requested URL. Logging failures are silently
+ * ignored to avoid crashing the server due to log errors.
+ *
+ * @param {http.IncomingMessage} req The request object
+ */
+function logRequest(req) {
+  const now = new Date().toISOString();
+  const line = `${now} ${req.method} ${req.url}\n`;
+  fs.appendFile(logFile, line, err => {
+    if (err) {
+      // In a production system you'd handle this appropriately
+      console.error('Failed to write to log', err);
+    }
+  });
+}
+
 
 // Create an HTTP server. The callback function will be invoked
 // whenever a request is received. Here we branch based on the
 // request method and pathname to build a tiny API. Unsupported
 // paths return a 404 Not Found response.
 const server = http.createServer((req, res) => {
+  // Log the request at the very beginning of handling it.
+  logRequest(req);
   const parsedUrl = url.parse(req.url, true);
   const { pathname } = parsedUrl;
 
